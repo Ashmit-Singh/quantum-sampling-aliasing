@@ -1,0 +1,15 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\ashmi\AppData\Local\Programs\Python\Python311\python.exe
+cachedir: .pytest_cache
+rootdir: C:\Users\ashmi\Downloads\quantum-sampling-aliasing-main\quantum-sampling-aliasing-main
+plugins: anyio-3.7.1, cov-7.0.0
+collecting ... collected 6 items
+
+tests/test_dsp.py::test_generate_signal PASSED                           [ 16%]
+tests/test_dsp.py::test_sample_signal PASSED                             [ 33%]
+tests/test_dsp.py::test_quantize PASSED                                  [ 50%]
+tests/test_dsp.py::test_oversample PASSED                                [ 66%]
+tests/test_api.py::test_health PASSED                                    [ 83%]
+tests/test_api.py::test_pipeline PASSED                                  [100%]
+
+============================== 6 passed in 2.60s ==============================

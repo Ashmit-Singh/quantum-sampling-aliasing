@@ -1,0 +1,260 @@
+============================= test session starts =============================
+platform win32 -- Python 3.11.9, pytest-9.0.2, pluggy-1.6.0
+rootdir: C:\Users\ashmi\Downloads\quantum-sampling-aliasing-main\quantum-sampling-aliasing-main
+plugins: anyio-3.7.1, cov-7.0.0
+collected 0 items / 2 errors
+
+=================================== ERRORS ====================================
+_____________________ ERROR collecting tests/test_dsp.py ______________________
+ImportError while importing test module 'C:\Users\ashmi\Downloads\quantum-sampling-aliasing-main\quantum-sampling-aliasing-main\tests\test_dsp.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+..\..\..\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_dsp.py:2: in <module>
+    from backend.dsp_engine import DSPEngine
+backend\__init__.py:2: in <module>
+    from .qft_bridge import QFTBridge
+backend\qft_bridge.py:9: in <module>
+    from qft_visualizer import visualize_qft
+modules\qft_visualizer.py:13: in <module>
+    import matplotlib
+..\..\..\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\__init__.py:144: in <module>
+    from . import _api, _version, cbook, _docstring, rcsetup
+..\..\..\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\rcsetup.py:27: in <module>
+    from matplotlib.colors import Colormap, is_color_like
+..\..\..\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\colors.py:56: in <module>
+    from matplotlib import _api, _cm, cbook, scale
+..\..\..\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\scale.py:22: in <module>
+    from matplotlib.ticker import (
+..\..\..\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\ticker.py:138: in <module>
+    from matplotlib import transforms as mtransforms
+..\..\..\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\transforms.py:49: in <module>
+    from matplotlib._path import (
+E   ImportError: numpy.core.multiarray failed to import
+------------------------------- Captured stderr -------------------------------
+
+A module that was compiled using NumPy 1.x cannot be run in
+NumPy 2.4.3 as it may crash. To support both 1.x and 2.x
+versions of NumPy, modules must be compiled with NumPy 2.0.
+Some module may need to rebuild instead e.g. with 'pybind11>=2.12'.
+
+If you are a user of the module, the easiest solution will be to
+downgrade to 'numpy<2' or try to upgrade the affected module.
+We expect that some modules will need time to support NumPy 2.
+
+Traceback (most recent call last):  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\pytest\__main__.py", line 9, in <module>
+    raise SystemExit(pytest.console_main())
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\config\__init__.py", line 223, in console_main
+    code = main()
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\config\__init__.py", line 199, in main
+    ret: ExitCode | int = config.hook.pytest_cmdline_main(config=config)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+    res = hook_impl.function(*args)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\main.py", line 365, in pytest_cmdline_main
+    return wrap_session(config, _main)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\main.py", line 318, in wrap_session
+    session.exitstatus = doit(config, session) or 0
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\main.py", line 371, in _main
+    config.hook.pytest_collection(session=session)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+    res = hook_impl.function(*args)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\main.py", line 382, in pytest_collection
+    session.perform_collect()
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\main.py", line 857, in perform_collect
+    self.items.extend(self.genitems(node))
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\main.py", line 1020, in genitems
+    rep, duplicate = self._collect_one_node(node, handle_dupes)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\main.py", line 883, in _collect_one_node
+    rep = collect_one_node(node)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\runner.py", line 576, in collect_one_node
+    rep: CollectReport = ihook.pytest_make_collect_report(collector=collector)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+    res = hook_impl.function(*args)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\runner.py", line 400, in pytest_make_collect_report
+    call = CallInfo.from_call(
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\runner.py", line 353, in from_call
+    result: TResult | None = func()
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\runner.py", line 398, in collect
+    return list(collector.collect())
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\python.py", line 563, in collect
+    self._register_setup_module_fixture()
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\python.py", line 576, in _register_setup_module_fixture
+    self.obj, ("setUpModule", "setup_module")
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\python.py", line 289, in obj
+    self._obj = obj = self._getobj()
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\python.py", line 560, in _getobj
+    return importtestmodule(self.path, self.config)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\python.py", line 507, in importtestmodule
+    mod = import_path(
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\pathlib.py", line 587, in import_path
+    importlib.import_module(module_name)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\assertion\rewrite.py", line 197, in exec_module
+    exec(co, module.__dict__)
+  File "C:\Users\ashmi\Downloads\quantum-sampling-aliasing-main\quantum-sampling-aliasing-main\tests\test_dsp.py", line 2, in <module>
+    from backend.dsp_engine import DSPEngine
+  File "C:\Users\ashmi\Downloads\quantum-sampling-aliasing-main\quantum-sampling-aliasing-main\backend\__init__.py", line 2, in <module>
+    from .qft_bridge import QFTBridge
+  File "C:\Users\ashmi\Downloads\quantum-sampling-aliasing-main\quantum-sampling-aliasing-main\backend\qft_bridge.py", line 9, in <module>
+    from qft_visualizer import visualize_qft
+  File "C:\Users\ashmi\Downloads\quantum-sampling-aliasing-main\quantum-sampling-aliasing-main\backend\..\modules\qft_visualizer.py", line 13, in <module>
+    import matplotlib
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\__init__.py", line 144, in <module>
+    from . import _api, _version, cbook, _docstring, rcsetup
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\rcsetup.py", line 27, in <module>
+    from matplotlib.colors import Colormap, is_color_like
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\colors.py", line 56, in <module>
+    from matplotlib import _api, _cm, cbook, scale
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\scale.py", line 22, in <module>
+    from matplotlib.ticker import (
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\ticker.py", line 138, in <module>
+    from matplotlib import transforms as mtransforms
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\transforms.py", line 49, in <module>
+    from matplotlib._path import (
+AttributeError: _ARRAY_API not found
+_____________________ ERROR collecting tests/test_api.py ______________________
+ImportError while importing test module 'C:\Users\ashmi\Downloads\quantum-sampling-aliasing-main\quantum-sampling-aliasing-main\tests\test_api.py'.
+Hint: make sure your test modules/packages have valid Python names.
+Traceback:
+..\..\..\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py:126: in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_api.py:2: in <module>
+    from backend.main import app
+backend\__init__.py:2: in <module>
+    from .qft_bridge import QFTBridge
+backend\qft_bridge.py:9: in <module>
+    from qft_visualizer import visualize_qft
+modules\qft_visualizer.py:13: in <module>
+    import matplotlib
+..\..\..\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\__init__.py:144: in <module>
+    from . import _api, _version, cbook, _docstring, rcsetup
+..\..\..\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\rcsetup.py:27: in <module>
+    from matplotlib.colors import Colormap, is_color_like
+..\..\..\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\colors.py:56: in <module>
+    from matplotlib import _api, _cm, cbook, scale
+..\..\..\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\scale.py:22: in <module>
+    from matplotlib.ticker import (
+..\..\..\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\ticker.py:138: in <module>
+    from matplotlib import transforms as mtransforms
+..\..\..\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\transforms.py:49: in <module>
+    from matplotlib._path import (
+E   ImportError: numpy.core.multiarray failed to import
+------------------------------- Captured stderr -------------------------------
+
+A module that was compiled using NumPy 1.x cannot be run in
+NumPy 2.4.3 as it may crash. To support both 1.x and 2.x
+versions of NumPy, modules must be compiled with NumPy 2.0.
+Some module may need to rebuild instead e.g. with 'pybind11>=2.12'.
+
+If you are a user of the module, the easiest solution will be to
+downgrade to 'numpy<2' or try to upgrade the affected module.
+We expect that some modules will need time to support NumPy 2.
+
+Traceback (most recent call last):  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\pytest\__main__.py", line 9, in <module>
+    raise SystemExit(pytest.console_main())
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\config\__init__.py", line 223, in console_main
+    code = main()
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\config\__init__.py", line 199, in main
+    ret: ExitCode | int = config.hook.pytest_cmdline_main(config=config)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+    res = hook_impl.function(*args)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\main.py", line 365, in pytest_cmdline_main
+    return wrap_session(config, _main)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\main.py", line 318, in wrap_session
+    session.exitstatus = doit(config, session) or 0
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\main.py", line 371, in _main
+    config.hook.pytest_collection(session=session)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+    res = hook_impl.function(*args)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\main.py", line 382, in pytest_collection
+    session.perform_collect()
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\main.py", line 857, in perform_collect
+    self.items.extend(self.genitems(node))
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\main.py", line 1020, in genitems
+    rep, duplicate = self._collect_one_node(node, handle_dupes)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\main.py", line 883, in _collect_one_node
+    rep = collect_one_node(node)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\runner.py", line 576, in collect_one_node
+    rep: CollectReport = ihook.pytest_make_collect_report(collector=collector)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\pluggy\_hooks.py", line 512, in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\pluggy\_manager.py", line 120, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\pluggy\_callers.py", line 121, in _multicall
+    res = hook_impl.function(*args)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\runner.py", line 400, in pytest_make_collect_report
+    call = CallInfo.from_call(
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\runner.py", line 353, in from_call
+    result: TResult | None = func()
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\runner.py", line 398, in collect
+    return list(collector.collect())
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\python.py", line 563, in collect
+    self._register_setup_module_fixture()
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\python.py", line 576, in _register_setup_module_fixture
+    self.obj, ("setUpModule", "setup_module")
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\python.py", line 289, in obj
+    self._obj = obj = self._getobj()
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\python.py", line 560, in _getobj
+    return importtestmodule(self.path, self.config)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\python.py", line 507, in importtestmodule
+    mod = import_path(
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\pathlib.py", line 587, in import_path
+    importlib.import_module(module_name)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\importlib\__init__.py", line 126, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\_pytest\assertion\rewrite.py", line 197, in exec_module
+    exec(co, module.__dict__)
+  File "C:\Users\ashmi\Downloads\quantum-sampling-aliasing-main\quantum-sampling-aliasing-main\tests\test_api.py", line 2, in <module>
+    from backend.main import app
+  File "C:\Users\ashmi\Downloads\quantum-sampling-aliasing-main\quantum-sampling-aliasing-main\backend\__init__.py", line 2, in <module>
+    from .qft_bridge import QFTBridge
+  File "C:\Users\ashmi\Downloads\quantum-sampling-aliasing-main\quantum-sampling-aliasing-main\backend\qft_bridge.py", line 9, in <module>
+    from qft_visualizer import visualize_qft
+  File "C:\Users\ashmi\Downloads\quantum-sampling-aliasing-main\quantum-sampling-aliasing-main\backend\..\modules\qft_visualizer.py", line 13, in <module>
+    import matplotlib
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\__init__.py", line 144, in <module>
+    from . import _api, _version, cbook, _docstring, rcsetup
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\rcsetup.py", line 27, in <module>
+    from matplotlib.colors import Colormap, is_color_like
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\colors.py", line 56, in <module>
+    from matplotlib import _api, _cm, cbook, scale
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\scale.py", line 22, in <module>
+    from matplotlib.ticker import (
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\ticker.py", line 138, in <module>
+    from matplotlib import transforms as mtransforms
+  File "C:\Users\ashmi\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\transforms.py", line 49, in <module>
+    from matplotlib._path import (
+AttributeError: _ARRAY_API not found
+=========================== short test summary info ===========================
+ERROR tests/test_dsp.py
+ERROR tests/test_api.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!
+============================== 2 errors in 3.14s ==============================
