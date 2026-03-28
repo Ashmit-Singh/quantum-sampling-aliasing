@@ -882,7 +882,11 @@ function buildStage3(sig,bits,osr){
     const lbl=makeLabel(g.label,\#\\);
     lbl.position.set(0,1.8,g.z);addObj(lbl);
   });
-const API_BASE = 'http://localhost:8000';
+// Auto-detect environment: use Render URL if not on localhost
+const RENDER_URL = 'https://[YOUR-RENDER-APP-NAME].onrender.com';
+const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
+  ? 'http://localhost:8000' 
+  : RENDER_URL;
 
 async function updateAll() {
   const type=document.getElementById('sig-type').value;
