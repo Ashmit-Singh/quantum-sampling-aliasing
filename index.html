@@ -3,7 +3,64 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Interactive 3D visualizer for quantum sampling, aliasing, ADC quantization, and oversampling concepts with real-time DSP signal processing.">
 <title>Quantum Sampling & Aliasing — 3D Visualizer v4.0</title>
+<script>
+// --- FIX 8A: Warm up Render immediately on page load ---
+const API_BASE_ROOT = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1"
+    ? "http://localhost:8000"
+    : "https://quantum-sampling-aliasing.onrender.com";
+
+(async () => {
+    try {
+        await fetch(`${API_BASE_ROOT}/health`);
+        console.log("Backend warm.");
+    } catch (e) {
+        console.warn("Backend cold, warming up...");
+    }
+})();
+
+// --- FIX 9: Slider debouncing ---
+function debounce(fn, delay = 300) {
+    let timer;
+    return (...args) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn(...args), delay);
+    };
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const pipelineFn = typeof window.runPipeline === 'function' ? window.runPipeline : (typeof window.updateAll === 'function' ? window.updateAll : function(){});
+    const debouncedPipeline = debounce(pipelineFn, 300);
+    
+    document.querySelectorAll('input[type="range"]').forEach(slider => {
+        slider.addEventListener('input', debouncedPipeline);
+        const originalInput = slider.oninput;
+        if(originalInput) {
+             slider.oninput = function() {
+                 if(typeof syncSlider === 'function') syncSlider(this);
+             };
+        }
+    });
+
+    // --- FIX 4: Frontend guard for QFT ---
+    const origJson = Response.prototype.json;
+    Response.prototype.json = async function() {
+        const res = await origJson.call(this);
+        if (res && typeof res === 'object' && res.qft !== undefined) {
+            if (!res.qft || !res.qft.success) {
+                console.warn("QFT skipped or failed:", res.qft ? res.qft.error : "null returned from backend");
+                res.qft = res.qft || {};
+                res.qft.amplitudes = res.qft.amplitudes || [];
+                res.qft.phases = res.qft.phases || [];
+                res.qft.measurement_probabilities = res.qft.measurement_probabilities || [];
+                res.qft.success = false;
+            }
+        }
+        return res;
+    };
+});
+</script>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;700&family=JetBrains+Mono:wght@300;400;500&display=swap');
 
@@ -124,6 +181,7 @@ canvas{display:block;}
 input[type=range]{
   width:100%;height:2px;
   -webkit-appearance:none;
+  appearance:none;
   border-radius:1px;outline:none;cursor:pointer;
   background:linear-gradient(
     to right,
@@ -286,6 +344,203 @@ input[type=range]::-moz-range-thumb{
   margin-bottom:8px;
 }
 .chart-canvas-wrap canvas{width:100%!important;display:block;cursor:crosshair;}
+
+/* ── Audio button ── */
+.audio-btn{
+  width:100%;padding:7px;
+  background:#4488ff22;
+  border:0.5px solid #4488ffaa;
+  color:#c8d4f0;
+  font-family:'JetBrains Mono',monospace;
+  font-size:10px;border-radius:5px;cursor:pointer;
+  transition:all .2s;
+}
+.audio-btn:hover{border-color:var(--blue);background:#4488ff33;}
+
+/* ── Real Data Panel ── */
+#real-data-panel{
+  position:fixed;top:52px;right:340px;width:280px;
+  background:var(--panel);
+  border-left:0.5px solid var(--border);
+  border-bottom:0.5px solid var(--border);
+  box-shadow:var(--inset);
+  backdrop-filter:var(--glass);
+  -webkit-backdrop-filter:var(--glass);
+  z-index:95;border-radius:0 0 0 8px;
+  overflow:hidden;transition:transform .3s ease;
+}
+#real-data-panel.collapsed .rdp-body{display:none;}
+.rdp-header{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:8px 12px;cursor:pointer;
+  border-bottom:0.5px solid var(--border);
+}
+.rdp-header h3{
+  font-family:'Sora',sans-serif;font-size:9px;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0;
+}
+.rdp-toggle{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;}
+.rdp-body{padding:12px;display:flex;flex-direction:column;gap:10px;}
+.rdp-btn{
+  width:100%;padding:8px 10px;
+  background:rgba(255,255,255,0.03);
+  border:0.5px solid var(--border);
+  color:var(--text);font-family:'JetBrains Mono',monospace;
+  font-size:10px;border-radius:5px;cursor:pointer;
+  transition:all .2s;display:flex;align-items:center;gap:6px;
+}
+.rdp-btn:hover{border-color:var(--border-h);background:rgba(68,136,255,0.08);}
+.rdp-btn:disabled{opacity:.5;cursor:wait;}
+.rdp-btn .spinner{
+  display:inline-block;width:12px;height:12px;
+  border:2px solid rgba(68,136,255,0.3);border-top-color:var(--blue);
+  border-radius:50%;animation:spin .6s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+.rdp-file-input{
+  width:100%;font-size:10px;color:var(--muted);
+  font-family:'JetBrains Mono',monospace;
+}
+.rdp-file-input::-webkit-file-upload-button{
+  background:rgba(68,136,255,0.12);border:0.5px solid rgba(68,136,255,0.4);
+  color:var(--blue);padding:4px 10px;border-radius:4px;cursor:pointer;
+  font-family:'JetBrains Mono',monospace;font-size:10px;margin-right:8px;
+}
+.rdp-divider{
+  height:0.5px;background:var(--border);margin:2px 0;
+}
+.rdp-label{
+  font-size:9px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;
+  font-family:'Sora',sans-serif;font-weight:600;
+}
+
+/* ── Source Badge ── */
+#source-badge{
+  position:fixed;top:58px;right:350px;
+  background:rgba(6,8,22,0.9);
+  border:0.5px solid var(--accent);
+  padding:4px 10px;border-radius:4px;
+  font-size:10px;color:var(--accent);
+  z-index:200;display:none;
+  font-family:'Sora',sans-serif;font-weight:500;
+  backdrop-filter:blur(8px);
+}
+
+/* ── QFT Hardware Panel ── */
+#qft-hw-panel{
+  border:0.5px solid var(--border);border-radius:6px;
+  padding:8px;background:rgba(255,255,255,0.015);
+}
+#qft-hw-panel .qft-status-dot{
+  display:inline-block;width:6px;height:6px;border-radius:50%;
+  margin-right:4px;vertical-align:middle;
+}
+.qft-status-dot.green{background:#33ffaa;box-shadow:0 0 4px #33ffaa;}
+.qft-status-dot.grey{background:#5a6a8a;}
+#qft-hw-result{
+  margin-top:8px;font-size:10px;
+  max-height:200px;overflow-y:auto;
+}
+.qft-bar-chart{display:flex;align-items:flex-end;gap:1px;height:60px;margin-top:6px;}
+.qft-bar{
+  flex:1;background:var(--accent);border-radius:1px 1px 0 0;
+  min-width:2px;position:relative;
+  transition:height .3s ease;
+}
+.qft-badge{
+  display:inline-block;padding:2px 6px;border-radius:3px;
+  font-size:9px;font-weight:600;font-family:'Sora',sans-serif;
+}
+.qft-badge.hw{background:rgba(255,68,85,0.15);color:#ff4455;border:0.5px solid rgba(255,68,85,0.4);}
+.qft-badge.sim{background:rgba(255,204,68,0.15);color:#ffcc44;border:0.5px solid rgba(255,204,68,0.4);}
+.qft-badge.cache{background:rgba(68,136,255,0.15);color:#4488ff;border:0.5px solid rgba(68,136,255,0.4);margin-left:4px;}
+
+/* ── Circuit Inspector Modal ── */
+#circuit-modal{
+  position:fixed;inset:0;z-index:500;
+  display:none;align-items:center;justify-content:center;
+  background:rgba(4,5,15,0.85);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  animation:modalFadeIn .3s ease;
+}
+#circuit-modal.visible{display:flex;}
+@keyframes modalFadeIn{from{opacity:0;}to{opacity:1;}}
+.circuit-modal-content{
+  background:rgba(6,8,22,0.95);
+  border:0.5px solid var(--accent);
+  border-radius:12px;
+  padding:24px;
+  max-width:90vw;max-height:85vh;
+  overflow:auto;
+  box-shadow:0 0 40px rgba(119,102,255,0.15), var(--inset);
+  position:relative;
+  animation:modalSlideIn .3s ease;
+}
+@keyframes modalSlideIn{from{transform:translateY(20px);opacity:0;}to{transform:none;opacity:1;}}
+.circuit-modal-header{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-bottom:16px;padding-bottom:12px;
+  border-bottom:0.5px solid var(--border);
+}
+.circuit-modal-header h2{
+  font-family:'Sora',sans-serif;font-size:14px;font-weight:700;
+  color:var(--accent);letter-spacing:-.02em;
+}
+.circuit-modal-close{
+  background:none;border:0.5px solid var(--border);border-radius:4px;
+  color:var(--muted);font-size:16px;cursor:pointer;padding:4px 10px;
+  font-family:'JetBrains Mono',monospace;
+  transition:all .2s;
+}
+.circuit-modal-close:hover{border-color:var(--red);color:var(--red);}
+.circuit-pre{
+  background:rgba(0,0,0,0.5);
+  border:0.5px solid var(--border);
+  border-radius:8px;
+  padding:16px;
+  font-family:'JetBrains Mono',monospace;
+  font-size:11px;line-height:1.6;
+  color:var(--text);
+  overflow-x:auto;
+  white-space:pre;
+  max-height:60vh;
+}
+.circuit-meta{
+  display:flex;gap:16px;margin-top:12px;
+  font-size:10px;color:var(--muted);
+  font-family:'JetBrains Mono',monospace;
+}
+.circuit-meta span{color:var(--blue);font-weight:500;}
+
+/* ── Async QFT Status ── */
+#qft-async-status{
+  font-size:9px;color:var(--accent);
+  font-family:'JetBrains Mono',monospace;
+  padding:4px 0;
+  transition:opacity .4s;
+}
+
+/* ── Toast Notifications ── */
+#toast-container{
+  position:fixed;bottom:40px;right:16px;z-index:300;
+  display:flex;flex-direction:column-reverse;gap:8px;
+}
+.toast{
+  background:rgba(6,8,22,0.95);border:0.5px solid var(--red);
+  padding:8px 14px;border-radius:6px;
+  font-size:10px;color:var(--text);
+  font-family:'JetBrains Mono',monospace;
+  backdrop-filter:blur(8px);
+  animation:toastIn .3s ease;
+  max-width:320px;
+}
+@keyframes toastIn{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:none;}}
+
+@media(max-width:900px){
+  #real-data-panel{display:none;}
+  #source-badge{display:none!important;}
+}
 
 /* ── Overlays ── */
 #hint{
@@ -451,9 +706,32 @@ input[type=range]::-moz-range-thumb{
         <div class="metric-tooltip">10 × log₁₀(OSR) dB — spreads noise wider</div>
       </div>
       <div class="metric">
+        <span class="metric-label">Effective SNR</span>
+        <span class="metric-val green" id="met-eff-snr">—</span>
+        <div class="metric-tooltip">Post-Butterworth filter SNR (real measurement)</div>
+      </div>
+      <div class="metric">
         <span class="metric-label">fs / f ratio</span>
         <span class="metric-val" id="met-ratio">—</span>
         <div class="metric-tooltip">Must be ≥ 2× to satisfy Nyquist criterion</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="ctrl-section">
+    <h3>Audio Engine</h3>
+    <div class="ctrl-row">
+      <button id="btn-audio" class="audio-btn" onclick="toggleAudio()">Start Audio Engine</button>
+    </div>
+    <div class="ctrl-row">
+      <div class="ctrl-label">Mode</div>
+      <div class="custom-select">
+        <select id="audio-mode" onchange="updateAudioBuffer()">
+          <option value="original">Original signal</option>
+          <option value="aliased">Aliased</option>
+          <option value="quantized">Quantized</option>
+          <option value="oversampled">Oversampled</option>
+        </select>
       </div>
     </div>
   </div>
@@ -473,6 +751,7 @@ input[type=range]::-moz-range-thumb{
     <button class="chart-tab" onclick="setChartTab(1)">Spectrum</button>
     <button class="chart-tab" onclick="setChartTab(2)">SNR</button>
     <button class="chart-tab" onclick="setChartTab(3)">Error</button>
+    <button class="chart-tab" onclick="setChartTab(4)">QFT</button>
   </div>
   <div id="charts-area">
     <div class="chart-canvas-wrap" id="cwrap0">
@@ -491,6 +770,60 @@ input[type=range]::-moz-range-thumb{
       <div class="chart-title">Quantization error heatmap</div>
       <canvas id="c2d-err" height="140"></canvas>
     </div>
+    <div class="chart-canvas-wrap" id="cwrap4" style="display:none">
+      <div class="chart-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Quantum Fourier Transform</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span id="qft-async-status" style="opacity:0.5">⚠ Backend offline</span>
+          <button id="btn-inspect-circuit" class="audio-btn" style="width:auto;padding:3px 10px;font-size:9px;" onclick="openCircuitModal()" disabled>🔍 Inspect Circuit</button>
+        </div>
+      </div>
+      <canvas id="c2d-qft" height="160"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Real Data Panel -->
+<div id="real-data-panel">
+  <div class="rdp-header" onclick="document.getElementById('real-data-panel').classList.toggle('collapsed')">
+    <h3>📡 Real Data Sources</h3>
+    <button class="rdp-toggle">▾</button>
+  </div>
+  <div class="rdp-body">
+    <div class="rdp-label">🎙️ Microphone / Audio</div>
+    <button class="rdp-btn" id="btn-mic" onclick="toggleMicRecording()">
+      <span>⏺</span> <span id="mic-label">Record 2s</span>
+    </button>
+    <input type="file" class="rdp-file-input" id="audio-file-input" accept=".wav,.mp3,.ogg" onchange="handleAudioFile(this)">
+    <div class="rdp-divider"></div>
+    <div class="rdp-label">📊 CSV / Sensor Data</div>
+    <input type="file" class="rdp-file-input" id="csv-file-input" accept=".csv,.txt" onchange="handleCSVFile(this)">
+    <div class="rdp-divider"></div>
+    <div class="rdp-label">⚛️ IBM Quantum Hardware</div>
+    <div id="qft-hw-panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+        <span style="font-size:10px;color:var(--muted);"><span class="qft-status-dot grey" id="qft-status-dot"></span><span id="qft-status-text">Checking…</span></span>
+      </div>
+      <button class="rdp-btn" id="btn-qft-hw" onclick="runHardwareQFT()">
+        <span>⚡</span> <span id="qft-hw-label">Run on IBM Hardware</span>
+      </button>
+      <div id="qft-hw-result"></div>
+    </div>
+  </div>
+</div>
+
+<div id="source-badge"></div>
+<div id="toast-container"></div>
+
+<!-- Circuit Inspector Modal -->
+<div id="circuit-modal">
+  <div class="circuit-modal-content">
+    <div class="circuit-modal-header">
+      <h2>⛛ Quantum State Preparation + QFT Circuit</h2>
+      <button class="circuit-modal-close" onclick="closeCircuitModal()">✕</button>
+    </div>
+    <pre class="circuit-pre" id="circuit-diagram-pre">No circuit data available. Run the backend to see the Qiskit circuit.</pre>
+    <div class="circuit-meta" id="circuit-meta"></div>
   </div>
 </div>
 
@@ -499,787 +832,11 @@ input[type=range]::-moz-range-thumb{
   <kbd>1</kbd>–<kbd>5</kbd> stages &nbsp;·&nbsp; <kbd>R</kbd> reset cam &nbsp;·&nbsp; <kbd>G</kbd> glitch
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js">
-// ══════════════════════════════════════════════════════════
-// WEB AUDIO ENGINE
-// ══════════════════════════════════════════════════════════
-let audioCtx = null;
-let activeSource = null;
-let isAudioEnabled = false;
-
-function toggleAudio() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  isAudioEnabled = !isAudioEnabled;
-  const btn = document.getElementById('btn-audio');
-  
-  if (isAudioEnabled) {
-    audioCtx.resume();
-    btn.textContent = 'Stop Audio Engine';
-    btn.style.background = '#ff445522';
-    btn.style.borderColor = '#ff4455';
-    btn.style.color = '#ff4455';
-    updateAudioBuffer(); // start playback immediately
-  } else {
-    audioCtx.suspend();
-    btn.textContent = 'Start Audio Engine';
-    btn.style.background = '#4488ff22';
-    btn.style.borderColor = '#4488ffaa';
-    btn.style.color = '#c8d4f0';
-    if (activeSource) { activeSource.stop(); activeSource = null; }
-  }
-}
-
-function updateAudioBuffer() {
-  if (!isAudioEnabled || !audioCtx || !chartData.sig) return;
-  
-  const mode = document.getElementById('audio-mode').value;
-  const freq = chartData.freq;
-  const sampRate = chartData.sampRate;
-  const bits = chartData.bits;
-  const osr = chartData.osr;
-  const fs_hz = freq * sampRate;
-  const type = document.getElementById('sig-type').value;
-  const amp = parseFloat(document.getElementById('sig-amp').value)/10;
-  
-  const sampleRate = audioCtx.sampleRate;
-  const duration = 1.0; 
-  const length = sampleRate * duration;
-  const buffer = audioCtx.createBuffer(1, length, sampleRate);
-  const data = buffer.getChannelData(0);
-
-  // Generate math representation 
-  for (let i = 0; i < length; i++) {
-    const t = i / sampleRate;
-    let v = 0;
-    
-    // Base frequency representation (can alias!)
-    let render_f = freq;
-    let is_aliasing = false;
-    
-    if (mode === 'aliased' && fs_hz < 2*freq) {
-        render_f = DSP.aliasFreq(freq, fs_hz);
-        is_aliasing = true;
-    }
-
-    if (type === 'sine')   v = Math.sin(2*Math.PI*render_f*t);
-    else if (type === 'square') v = Math.sign(Math.sin(2*Math.PI*render_f*t));
-    else if (type === 'chirp')  v = Math.sin(2*Math.PI*(render_f+render_f*2*t)*t);
-    else if (type === 'multi')  v = Math.sin(2*Math.PI*render_f*t)*.6 + Math.sin(2*Math.PI*render_f*3.1*t)*.4;
-    
-    v *= amp;
-
-    if (mode === 'quantized') {
-       const levels = Math.pow(2, bits);
-       const lsb = (2 * amp) / levels;
-       v = Math.round(v / lsb) * lsb;
-    }
-    
-    if (mode === 'oversampled') {
-       const levels = Math.pow(2, bits);
-       const lsb = (2 * amp) / levels;
-       // Add high freq noise mimicking dither then quantizing, then LPF (simulating OSR)
-       const noise = (Math.random() - 0.5) * lsb;
-       let q_val = Math.round((v + noise) / lsb) * lsb;
-       // We fade OSR error by sqrt(OSR), simulating filter averaging
-       const err = v - q_val;
-       v = v - err / Math.sqrt(osr); 
-    }
-    
-    data[i] = v * 0.5; // Scale volume down slightly
-  }
-
-  if (activeSource) {
-    activeSource.stop();
-  }
-
-  activeSource = audioCtx.createBufferSource();
-  activeSource.buffer = buffer;
-  activeSource.loop = true;
-  activeSource.connect(audioCtx.destination);
-  activeSource.start(0);
-}
-
-const orig_render = _renderFromData;
-_renderFromData = function() {
-    orig_render.apply(this, arguments);
-    updateAudioBuffer();
-};
-
-const orig_updateAllJS = updateAllJS;
-updateAllJS = function() {
-    orig_updateAllJS.apply(this, arguments);
-    updateAudioBuffer();
-};
-
-
-</script>
-function makeLabel(text,color='#4488ff'){
-  const c=document.createElement('canvas');
-  c.height=48;
-  const ctx=c.getContext('2d');
-  ctx.font='500 14px "Sora", sans-serif';
-  const measured=ctx.measureText(text).width;
-  c.width=Math.ceil(measured)+24;
-  ctx.clearRect(0,0,c.width,48);
-  ctx.fillStyle=color;
-  ctx.font='500 14px "Sora", sans-serif';
-  ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillText(text,c.width/2,24);
-  const tex=new THREE.CanvasTexture(c);
-  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,depthTest:false});
-  const spr=new THREE.Sprite(mat);
-  const aspect=c.width/48;
-  spr.scale.set(aspect*.4,.4,1);
-  return spr;
-}
-
-function makeTube(pts3,color,radius=.04,segments=6,useShader=true){
-  if(pts3.length<2)return null;
-  const curve=new THREE.CatmullRomCurve3(pts3);
-  const geo=new THREE.TubeGeometry(curve,Math.min(pts3.length*2,300),radius,segments,false);
-  const mat=useShader?energyMat(color):new THREE.MeshPhongMaterial({color,emissive:color,emissiveIntensity:.5,shininess:30});
-  return addObj(new THREE.Mesh(geo,mat));
-}
-
-const WATERFALL_W=64,WATERFALL_D=80;
-const wfData=new Uint8Array(WATERFALL_W*WATERFALL_D*3);
-const wfTex=new THREE.DataTexture(wfData,WATERFALL_W,WATERFALL_D,THREE.RGBFormat);
-wfTex.needsUpdate=true;
-const wfGeo=new THREE.PlaneGeometry(8,4);
-const wfMat=new THREE.MeshBasicMaterial({map:wfTex,transparent:true,opacity:.85,side:THREE.DoubleSide});
-const wfMesh=new THREE.Mesh(wfGeo,wfMat);
-wfMesh.rotation.x=-Math.PI/2;wfMesh.position.set(0,-2.1,-3);
-scene.add(wfMesh);
-
-function dbToRGB(db){
-  const norm=Math.max(0,Math.min(1,(db+80)/80));
-  let r,g,b;
-  if(norm<.25){r=0;g=0;b=Math.floor(norm*4*255);}
-  else if(norm<.5){const t=(norm-.25)*4;r=Math.floor(t*180);g=0;b=255;}
-  else if(norm<.75){const t=(norm-.5)*4;r=Math.floor(180+t*75);g=Math.floor(t*140);b=Math.floor(255*(1-t));}
-  else{const t=(norm-.75)*4;r=255;g=Math.floor(140+t*115);b=Math.floor(t*255);}
-  return [r,g,b];
-}
-function updateWaterfall(fftMag){
-  wfData.copyWithin(WATERFALL_W*3,0,WATERFALL_W*(WATERFALL_D-1)*3);
-  for(let x=0;x<WATERFALL_W;x++){
-    const fi=Math.floor(x*fftMag.length/WATERFALL_W);
-    const db=fftMag[fi]||(-80);
-    const [r,g,b]=dbToRGB(db);
-    wfData[x*3]=r;wfData[x*3+1]=g;wfData[x*3+2]=b;
-  }
-  wfTex.needsUpdate=true;
-}
-
-const historyGroup=new THREE.Group();
-scene.add(historyGroup);
-const signalHistory=[];
-const MAX_HISTORY=8;
-let historyTubes=[];
-
-function updateHistoryRibbon(sig){
-  signalHistory.push([...sig.s]);
-  if(signalHistory.length>MAX_HISTORY)signalHistory.shift();
-  historyTubes.forEach(t=>{
-    t.geometry.dispose();
-    if(t.material&&t.material.dispose)t.material.dispose();
-    historyGroup.remove(t);
-  });
-  historyTubes=[];
-  signalHistory.forEach((snap,hi)=>{
-    const age=signalHistory.length-1-hi;
-    if(age===0)return;
-    const opacity=0.8*(1-age/(MAX_HISTORY-1))*0.8+0.05;
-    const zOff=-(age+1)*0.4;
-    const pts=snap.map((v,i)=>new THREE.Vector3(i/DSP.N_SAMPLES*16-8,v*.8,zOff));
-    if(pts.length<2)return;
-    const curve=new THREE.CatmullRomCurve3(pts);
-    const geo=new THREE.TubeGeometry(curve,Math.min(pts.length,200),.02,4,false);
-    const mat=new THREE.MeshPhongMaterial({
-      color:0x4488ff,emissive:0x4488ff,
-      emissiveIntensity:opacity*0.6,
-      transparent:true,opacity
-    });
-    const mesh=new THREE.Mesh(geo,mat);
-    historyGroup.add(mesh);
-    historyTubes.push(mesh);
-  });
-}
-
-let osrTerrainRef=null;
-let osrErrFrom=null,osrErrTo=null;
-let osrLerpT=1,currentOSRLerp=1;
-
-function buildStage0(sig){
-  updateHistoryRibbon(sig);
-  const pts=sig.t.map((t,i)=>new THREE.Vector3(t*16-8,sig.s[i]*.8,0));
-  makeTube(pts,0x4488ff,.06,8);
-  const axGeo=new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-8.5,0,0),new THREE.Vector3(8.5,0,0)]);
-  addObj(new THREE.Line(axGeo,new THREE.LineBasicMaterial({color:0x112244,transparent:true,opacity:.35})));
-  orb={...orb,theta:.2,phi:1.3,r:10};
-}
-
-function buildStage1(sig,sampRate,freq,amp){
-  const fs=freq*sampRate;
-  const isAliased=sampRate<2;
-  const pts=sig.t.map((t,i)=>new THREE.Vector3(t*16-8,sig.s[i]*.8,0));
-  makeTube(pts,0x224488,.03,4,false);
-  const step=Math.max(1,Math.round(DSP.N_SAMPLES/(sampRate*10)));
-  const sampleCount=Math.max(1,Math.floor(DSP.N_SAMPLES/step));
-  const pillarColor=isAliased?0xff4455:0x33ffaa;
-  const cylGeo=new THREE.CylinderGeometry(.06,.06,1,6);
-  const sphGeo=new THREE.SphereGeometry(.08,8,8);
-  const pillarMat=new THREE.MeshPhongMaterial({color:pillarColor,emissive:pillarColor,emissiveIntensity:.7});
-  const sphereMat=new THREE.MeshPhongMaterial({color:pillarColor,emissive:pillarColor,emissiveIntensity:.9});
-  const instPillar=new THREE.InstancedMesh(cylGeo,pillarMat,sampleCount);
-  const instSphere=new THREE.InstancedMesh(sphGeo,sphereMat,sampleCount);
-  const dummy=new THREE.Object3D();
-  let idx=0;
-  for(let i=0;i<DSP.N_SAMPLES&&idx<sampleCount;i+=step,idx++){
-    const x=sig.t[i]*16-8,y=sig.s[i]*.8;
-    const h=Math.abs(y)+.01;
-    dummy.position.set(x,y/2,0);dummy.scale.set(1,h,1);dummy.updateMatrix();
-    instPillar.setMatrixAt(idx,dummy.matrix);
-    dummy.position.set(x,y,0);dummy.scale.set(1,1,1);dummy.updateMatrix();
-    instSphere.setMatrixAt(idx,dummy.matrix);
-  }
-  instPillar.instanceMatrix.needsUpdate=true;
-  instSphere.instanceMatrix.needsUpdate=true;
-  addObj(instPillar);addObj(instSphere);
-  if(isAliased){
-    const aliasFreq=DSP.aliasFreq(freq,fs);
-    const blend=Math.min(1,(2-sampRate)/2);
-    const aliasPts=sig.t.map((t,i)=>{
-      const origY=sig.s[i]*.8;
-      const aliasY=Math.sin(2*Math.PI*aliasFreq*t)*amp*.8;
-      const y=origY*(1-blend)+aliasY*blend;
-      return new THREE.Vector3(t*16-8,y,.5);
-    });
-    makeTube(aliasPts,0xff8833,.04,6);
-    const ghostLbl=makeLabel('alias ghost','#ff8833');
-    ghostLbl.position.set(0,1.2,.5);addObj(ghostLbl);
-  }
-  const nyqLbl=makeLabel('fs/2',isAliased?'#ff4455':'#33ffaa');
-  nyqLbl.position.set(0,2.4,0);addObj(nyqLbl);
-  orb={...orb,theta:.3,phi:1.2,r:11};
-}
-function buildStage2(sig,bits){
-  const {q,err,LSB,levels}=DSP.quantize(sig.s,bits);
-  const amp=Math.max(...sig.s.map(Math.abs))||1;
-  const origPts=sig.t.map((t,i)=>new THREE.Vector3(t*16-8,sig.s[i]*.8,.3));
-  makeTube(origPts,0x4488ff,.03,6);
-  [2,4].forEach((cb,li)=>{
-    if(cb===bits)return;
-    const {q:qc}=DSP.quantize(sig.s,cb);
-    const zOff=(li+1)*1.2;
-    const stairPts=[];
-    for(let i=0;i<DSP.N_SAMPLES-1;i++){
-      stairPts.push(new THREE.Vector3(sig.t[i]*16-8,qc[i]*.8,zOff));
-      stairPts.push(new THREE.Vector3(sig.t[i+1]*16-8,qc[i]*.8,zOff));
-    }
-    if(stairPts.length>1){
-      const g=new THREE.BufferGeometry().setFromPoints(stairPts);
-      addObj(new THREE.Line(g,new THREE.LineBasicMaterial({color:0x445566,transparent:true,opacity:.5})));
-    }
-    const lbl=makeLabel(\\-bit\,'#445566');
-    lbl.position.set(8,qc[0]*.8+.5,zOff);addObj(lbl);
-  });
-  const numVisible=Math.min(levels,48);
-  const levelStep=(2*amp)/numVisible;
-  const planeGeo=new THREE.PlaneGeometry(16,.002);
-  const planeMat=new THREE.MeshBasicMaterial({color:0x334455,transparent:true,opacity:.3,side:THREE.DoubleSide});
-  const instPlane=new THREE.InstancedMesh(planeGeo,planeMat,numVisible+1);
-  const dummy2=new THREE.Object3D();
-  for(let i=0;i<=numVisible;i++){
-    const y=(-amp+i*levelStep)*.8;
-    dummy2.position.set(0,y,-.1);dummy2.updateMatrix();
-    instPlane.setMatrixAt(i,dummy2.matrix);
-  }
-  instPlane.instanceMatrix.needsUpdate=true;addObj(instPlane);
-  const stairShape=new THREE.Shape();
-  stairShape.moveTo(sig.t[0]*16-8,q[0]*.8);
-  for(let i=0;i<DSP.N_SAMPLES-1;i++){
-    stairShape.lineTo(sig.t[i+1]*16-8,q[i]*.8);
-    stairShape.lineTo(sig.t[i+1]*16-8,q[i+1]*.8);
-  }
-  for(let i=DSP.N_SAMPLES-2;i>=0;i--){
-    stairShape.lineTo(sig.t[i+1]*16-8,q[i]*.8-.02);
-    stairShape.lineTo(sig.t[i]*16-8,q[i]*.8-.02);
-  }
-  const extGeo=new THREE.ExtrudeGeometry(stairShape,{depth:.04,bevelEnabled:false});
-  addObj(new THREE.Mesh(extGeo,new THREE.MeshPhongMaterial({color:0xff4455,emissive:0x881122,emissiveIntensity:.4,shininess:60})));
-  const tW=100,tH=20;
-  const tGeo=new THREE.PlaneGeometry(16,2,tW-1,tH-1);
-  tGeo.rotateX(-Math.PI/2);
-  const pos=tGeo.attributes.position;
-  const cols=new Float32Array(pos.count*3);
-  for(let i=0;i<pos.count;i++){
-    const xi=Math.floor(i%tW);
-    const ei=Math.floor(xi*DSP.N_SAMPLES/tW);
-    pos.setY(i,-1.6+err[ei]*.8*2);
-    const norm=Math.min(Math.abs(err[ei])/(LSB*.5),1);
-    cols[i*3]=norm;cols[i*3+1]=.15*(1-norm);cols[i*3+2]=1-norm;
-  }
-  tGeo.computeVertexNormals();
-  tGeo.setAttribute('color',new THREE.BufferAttribute(cols,3));
-  addObj(new THREE.Mesh(tGeo,new THREE.MeshPhongMaterial({vertexColors:true,shininess:20})));
-  orb={...orb,theta:.5,phi:1.0,r:12};
-}
-
-function buildStage3(sig,bits,osr){
-  const {q,err}=DSP.quantize(sig.s,bits);
-  const gain=DSP.osrGain(osr);
-  const groups=[
-    {z:-2.5,label:'Baseline (1×)',color:0xff4455,noiseScale:1},
-    {z:2.5,label:\\× Oversampled\,color:0x33ffaa,noiseScale:1/Math.sqrt(osr)}
-  ];
-  groups.forEach((g,gi)=>{
-    const pts=sig.t.map((t,i)=>new THREE.Vector3(t*12-6,sig.s[i]*.7,g.z));
-    makeTube(pts,0x4488ff,.03,4);
-    const qPts=sig.t.map((t,i)=>new THREE.Vector3(t*12-6,q[i]*.7,g.z));
-    makeTube(qPts,g.color,.04,4);
-    const nW=80,nH=8;
-    const nGeo=new THREE.PlaneGeometry(12,1.5,nW-1,nH-1);
-    nGeo.rotateX(-Math.PI/2);
-    const nPos=nGeo.attributes.position;
-    const posCount=nPos.count;
-    const yPositions=new Float32Array(posCount);
-    for(let i=0;i<posCount;i++){
-      const xi=Math.floor(i%nW*DSP.N_SAMPLES/nW);
-      const y=-1.3+err[xi]*g.noiseScale*1.5;
-      nPos.setY(i,y);
-      nPos.setZ(i,g.z+(Math.floor(i/nW)/(nH-1)-.5)*1.5);
-      yPositions[i]=y;
-    }
-    nGeo.computeVertexNormals();
-    const nMesh=new THREE.Mesh(nGeo,new THREE.MeshPhongMaterial({color:g.color,transparent:true,opacity:.6,shininess:40}));
-    addObj(nMesh);
-    if(gi===1){
-      osrTerrainRef={mesh:nMesh,geo:nGeo,posCount,nW,nH};
-      const fromPositions=new Float32Array(posCount);
-      for(let i=0;i<posCount;i++){
-        const xi=Math.floor(i%nW*DSP.N_SAMPLES/nW);
-        fromPositions[i]=-1.3+err[xi]*1.0*1.5;
-      }
-      osrErrFrom=fromPositions;osrErrTo=yPositions;osrMeshValid=true;
-    }
-    const snrBase=DSP.snrTheory(bits);
-    const snrVal=snrBase+(g.noiseScale<1?gain:0);
-    const tH2=snrVal*.04;
-    const tGeo2=new THREE.BoxGeometry(.4,tH2,.4);
-    const tMesh=new THREE.Mesh(tGeo2,new THREE.MeshPhongMaterial({color:g.color,emissive:g.color,emissiveIntensity:.4}));
-    tMesh.position.set(7,tH2/2,g.z);addObj(tMesh);
-    if(gi===1){
-      const enob=DSP.ENOB(snrVal);
-      const eGeo=new THREE.CylinderGeometry(.05,.05,enob*.3,8);
-      const eMesh=new THREE.Mesh(eGeo,new THREE.MeshPhongMaterial({color:0xffcc44,emissive:0xffcc44,emissiveIntensity:.8,transparent:true,opacity:.7}));
-      eMesh.position.set(8,enob*.15,g.z);addObj(eMesh);
-      const eLabel=makeLabel(\ENOB: \ bits\,'#ffcc44');
-      eLabel.position.set(8,enob*.3+.4,g.z);addObj(eLabel);
-    }
-    const lbl=makeLabel(g.label,\#\\);
-    lbl.position.set(0,1.8,g.z);addObj(lbl);
-  });
-// Auto-detect environment: use Render URL if not on localhost
-const RENDER_URL = 'https://quantum-sampling-aliasing.onrender.com';
-const API_BASE = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') 
-  ? 'http://localhost:8000' 
-  : RENDER_URL;
-
-async function updateAll() {
-  const type=document.getElementById('sig-type').value;
-  const freq=parseFloat(document.getElementById('sig-freq').value);
-  const amp=parseFloat(document.getElementById('sig-amp').value)/10;
-  const noise=parseFloat(document.getElementById('sig-noise').value);
-  const sampRate=parseFloat(document.getElementById('samp-rate').value)/10;
-  const bits=parseInt(document.getElementById('adc-bits').value);
-  const osr=parseInt(document.getElementById('osr-sel').value);
-  const fs=freq*sampRate;
-  const isAliased=sampRate<2;
-
-  document.getElementById('lbl-freq').textContent=freq+' Hz';
-  document.getElementById('lbl-amp').textContent=amp.toFixed(1);
-  document.getElementById('lbl-noise').textContent=(noise/100).toFixed(2);
-  document.getElementById('lbl-fs').textContent=sampRate.toFixed(1)+'× Nyquist';
-  document.getElementById('lbl-bits').textContent=bits+' bits';
-  document.getElementById('lbl-osr').textContent=osr+'×';
-
-  const badge=document.getElementById('nyquist-badge');
-  if(isAliased){
-    badge.className='aliased';badge.textContent='⚠ ALIASED — below Nyquist';
-    document.getElementById('lbl-alias').textContent=DSP.aliasFreq(freq,fs).toFixed(2)+' Hz';
-    glitchT=2.0;
-    canvas3d.style.transition='filter 0.1s ease';
-    canvas3d.style.filter='hue-rotate(18deg) contrast(1.08)';
-    setTimeout(()=>{canvas3d.style.filter='';},380);
-    const tb=document.getElementById('topbar');
-    tb.style.borderBottomColor='rgba(255,68,85,0.5)';
-    setTimeout(()=>tb.style.borderBottomColor='',250);
-  } else {
-    badge.className='safe';badge.textContent='✓ Above Nyquist';
-    document.getElementById('lbl-alias').textContent='—';
-  }
-
-  const payload = {
-    signal_type: type,
-    frequency: freq,
-    amplitude: amp,
-    noise_level: noise / 100,
-    sampling_rate_ratio: sampRate,
-    bits: bits,
-    osr: osr
-  };
-
-  try {
-    const res = await fetch(`${API_BASE}/api/pipeline`, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    _renderFromData(data.signal, data.quantization, data.oversampling, data.fft, freq, sampRate, bits, osr);
-  } catch(e) {
-    console.warn('Backend offline — using JS fallback math');
-    updateAllJS(type, freq, amp, noise, sampRate, bits, osr);
-  }
-}
-
-function updateAllJS(type, freq, amp, noise, sampRate, bits, osr) {
-  const sig=DSP.generateSignal(type,freq,amp,noise);
-  const {q,err,LSB}=DSP.quantize(sig.s,bits);
-  const snrT=DSP.snrTheory(bits);
-  const snrS=DSP.snrSimulated(sig.s,err);
-  const osrG=DSP.osrGain(osr);
-  const enob=DSP.ENOB(snrS+osrG);
-  const fftMag=DSP.fft(sig.s);
-  
-  _renderFromData(
-    sig, 
-    {q: q, error: err, lsb_size: LSB, snr_theoretical: snrT, snr_simulated: snrS}, 
-    {snr_gain_db: osrG, enob: enob}, 
-    {magnitudes_db: fftMag}, 
-    freq, sampRate, bits, osr
-  );
-}
-
-function _renderFromData(sig, quantization, oversampling, fftData, freq, sampRate, bits, osr) {
-  const err = quantization.error || quantization.err;
-  const LSB = quantization.lsb_size || quantization.LSB;
-  const snrT = quantization.snr_theoretical;
-  const snrS = quantization.snr_simulated;
-  const osrG = oversampling.snr_gain_db;
-  const enob = oversampling.enob;
-
-  document.getElementById('met-snr-t').textContent=snrT.toFixed(1)+' dB';
-  document.getElementById('met-snr-s').textContent=snrS.toFixed(1)+' dB';
-  document.getElementById('met-enob').textContent=enob.toFixed(2)+' bits';
-  document.getElementById('met-osrg').textContent='+'+osrG.toFixed(1)+' dB';
-  document.getElementById('met-ratio').textContent=sampRate.toFixed(1)+'×';
-  document.getElementById('lbl-lsb').textContent=LSB.toFixed(4);
-
-  const rms=Math.sqrt(sig.s.reduce((a,v)=>a+v*v,0)/sig.s.length);
-  starMat.size=0.04+rms*0.07;
-  starMat.opacity=0.28+rms*0.35;
-
-  chartData={sig,bits,osr,snrT,snrS,fftMag:fftData.magnitudes_db,err,freq,sampRate};
-  DSP.quantize = function(s, b) { return {q: quantization.q || quantization.quantized, err: err, LSB: LSB, levels: quantization.levels} } // Mock for stage builds temporarily
-  updateCharts();
-
-  clearScene();
-  const prevOsrErrTo=osrErrTo;
-  osrErrFrom=prevOsrErrTo?new Float32Array(prevOsrErrTo):null;
-  osrErrTo=null;osrLerpT=0;
-
-  let amp = parseFloat(document.getElementById('sig-amp').value)/10;
-  switch(currentStage){
-    case 0:buildStage0(sig);break;
-    case 1:buildStage1(sig,sampRate,freq,amp);break;
-    case 2:buildStage2(sig,bits);break;
-    case 3:buildStage3(sig,bits,osr);break;
-    case 4:buildStage4(sig,bits,osr,sampRate);break;
-  }
-  if(currentStage===3&&osrErrTo&&osrErrFrom){osrLerpT=0;}else{osrLerpT=1;}
-  updateWaterfall(fftData.magnitudes_db);
-}
-
-let currentStage=0,animT=0,glitchT=0;
-let isTransitioning=false;
-
-const STAGE_LABELS=['Stage 01 — Analog Signal','Stage 02 — Sampling & Aliasing','Stage 03 — ADC Quantization','Stage 04 — Oversampling','Stage 05 — Full Pipeline'];
-const CALLOUTS=['The continuous analog signal — infinite resolution. 8 history snapshots trail behind.','Nyquist: sample ≥ 2× freq or aliases appear. Drag below 2× for the ghost signal + glitch effect.','Each ADC bit = +6 dB SNR. 2-bit = 4 levels. Error terrain shows quantization noise magnitude.','Oversampling spreads noise wider. 4× = +1 effective bit. Watch noise terrain flatten over 600ms.','Full pipeline: original → sampled → quantized → oversampled. Particles flow along cleanest signal.'];
-const STAGE_RELEVANCE={0:['sec-signal'],1:['sec-signal','sec-samp'],2:['sec-signal','sec-adc'],3:['sec-signal','sec-adc','sec-osr'],4:['sec-signal','sec-samp','sec-adc','sec-osr']};
-
-function updateSectionDimming(stage){
-  const rel=STAGE_RELEVANCE[stage]||[];
-  ['sec-signal','sec-samp','sec-adc','sec-osr'].forEach(id=>document.getElementById(id).classList.toggle('dimmed',!rel.includes(id)));
-}
-
-function setStage(n){
-  if(isTransitioning)return;
-  isTransitioning=true;
-  const overlay=document.getElementById('fade-overlay');
-  overlay.style.transition='opacity .2s';overlay.style.opacity='1';overlay.style.pointerEvents='all';
-  setTimeout(()=>{
-    currentStage=n;
-    document.querySelectorAll('.stage-btn').forEach((b,i)=>b.classList.toggle('active',i===n));
-    document.getElementById('stage-label').textContent=STAGE_LABELS[n];
-    document.getElementById('stage-callout').textContent=CALLOUTS[n];
-    updateSectionDimming(n);
-    updateAll();
-    overlay.style.opacity='0';overlay.style.pointerEvents='none';
-    setTimeout(()=>isTransitioning=false,220);
-  },200);
-}
-
-function onResize(){
-  const sw=W(),sh=H();
-  renderer.setSize(sw,sh);
-  camera.aspect=sw/sh;camera.updateProjectionMatrix();
-  if(!isMobile()){
-    canvas3d.style.marginLeft='260px';
-    canvas3d.style.marginTop='52px';
-  } else {
-    canvas3d.style.marginLeft='0';
-    canvas3d.style.marginTop='52px';
-  }
-  matBloomH.uniforms.h.value=1/sw;
-  matBloomV.uniforms.v.value=1/sh;
-  buildRTs();updateCharts();
-}
-
-const fpsBuf=new Float32Array(30);let fpsIdx=0,fpsLast=performance.now();
-function tickFPS(){
-  const now=performance.now();
-  fpsBuf[fpsIdx%30]=1000/(now-fpsLast);
-  fpsIdx++;fpsLast=now;
-  if(fpsIdx%10===0){
-    const avg=fpsBuf.reduce((a,b)=>a+b,0)/30;
-    document.getElementById('fps-counter').textContent=avg.toFixed(0)+' fps';
-  }
-}
-
-function easeOut(t){return 1-Math.pow(1-t,3);}
-const dummyAnim=new THREE.Object3D();
-
-let updateTimer=null;
-function debouncedUpdate(){clearTimeout(updateTimer);updateTimer=setTimeout(updateAll,60);}
-
-function animate(){
-  requestAnimationFrame(animate);
-  animT+=.005;tickFPS();
-  if(glitchT>0)glitchT=Math.max(0,glitchT-.016);
-
-  sceneObjects.forEach(o=>{
-    if(o.material&&o.material.uniforms&&o.material.uniforms.time){
-      o.material.uniforms.time.value=animT;
-    }
-  });
-
-  sceneObjects.forEach(o=>{
-    if(o.userData.isSincPulse){
-       const phase = (animT * 2.0 - o.userData.sincOffset) % 3.0;
-       const alpha = phase > 0 && phase < 1.0 ? phase * 0.4 : (phase >= 1.0 && phase < 2.0 ? (2.0 - phase) * 0.4 : 0);
-       o.material.opacity = alpha;
-    }
-  });
-  
-  sceneObjects.forEach(o=>{
-    if(o.userData.isParticles&&o.userData.curve){
-      const pos=o.geometry.attributes.position;
-      for(let i=0;i<pos.count;i++){
-        const t=((animT*.3+i/pos.count)%1);
-        const pt=o.userData.curve.getPoint(t);
-        pos.setXYZ(i,pt.x,pt.y,pt.z);
-      }
-      pos.needsUpdate=true;
-    }
-  });
-
-  sceneObjects.forEach(o=>{
-    if(o.userData.isErrParticles){
-      const em=o.userData.errMags,bYs=o.userData.baseYs,xPs=o.userData.xPositions,zPs=o.userData.zPositions;
-      if(!em)return;
-      for(let i=0;i<o.count;i++){
-        const errMag=em[i]||0;
-        const y=bYs[i]+Math.sin(animT*3+i)*.4*errMag*6;
-        dummyAnim.position.set(xPs[i],y,zPs[i]);dummyAnim.updateMatrix();
-        o.setMatrixAt(i,dummyAnim.matrix);
-      }
-      o.instanceMatrix.needsUpdate=true;
-    }
-  });
-
-  if(currentStage===3&&osrMeshValid&&osrTerrainRef&&osrErrFrom&&osrErrTo&&osrLerpT<1){
-    osrLerpT=Math.min(1,osrLerpT+.016/0.6);
-    const lerped=easeOut(osrLerpT);
-    const geo=osrTerrainRef.geo;
-    const pos=geo.attributes.position;
-    for(let i=0;i<osrTerrainRef.posCount;i++){
-      const fromY=osrErrFrom[i],toY=osrErrTo[i];
-      pos.setY(i,fromY+(toY-fromY)*lerped);
-    }
-    pos.needsUpdate=true;geo.computeVertexNormals();
-  }
-
-  stars.rotation.y=animT*0.03;
-
-  orbitCamera();
-
-  bloomScene.remove(quadH,quadV,quadC,quadF);
-  renderer.setRenderTarget(rtMain);
-  renderer.clear();renderer.render(scene,camera);
-
-  matBloomH.uniforms.tDiffuse.value=rtMain.texture;
-  bloomScene.add(quadH);
-  renderer.setRenderTarget(rtBloomH);renderer.clear();renderer.render(bloomScene,bloomCam);
-
-  bloomScene.remove(quadH);
-  matBloomV.uniforms.tDiffuse.value=rtBloomH.texture;
-  bloomScene.add(quadV);
-  renderer.setRenderTarget(rtBloomV);renderer.clear();renderer.render(bloomScene,bloomCam);
-
-  bloomScene.remove(quadV);
-  matComposite.uniforms.tBase.value=rtMain.texture;
-  matComposite.uniforms.tBloom.value=rtBloomV.texture;
-  bloomScene.add(quadC);
-  renderer.setRenderTarget(rtComposite);renderer.clear();renderer.render(bloomScene,bloomCam);
-
-  bloomScene.remove(quadC);
-  matFilm.uniforms.tDiffuse.value=rtComposite.texture;
-  matFilm.uniforms.time.value=animT;
-  matFilm.uniforms.glitch.value=glitchT>0?Math.min(1,glitchT):0;
-  bloomScene.add(quadF);
-  renderer.setRenderTarget(null);renderer.clear();renderer.render(bloomScene,bloomCam);
-}
-
-window.addEventListener('keydown',e=>{
-  if(e.key>='1'&&e.key<='5')setStage(parseInt(e.key)-1);
-  if(e.key==='r'||e.key==='R'){orb.theta=.5;orb.phi=1.1;orb.r=10;}
-  if(e.key==='g'||e.key==='G'){glitchT=2.0;}
-});
-
-window.addEventListener('resize',onResize);
-onResize();
-updateSectionDimming(0);
-updateAll();
-animate();
-
-// ══════════════════════════════════════════════════════════
-// WEB AUDIO ENGINE
-// ══════════════════════════════════════════════════════════
-let audioCtx = null;
-let activeSource = null;
-let isAudioEnabled = false;
-
-function toggleAudio() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  isAudioEnabled = !isAudioEnabled;
-  const btn = document.getElementById('btn-audio');
-  
-  if (isAudioEnabled) {
-    audioCtx.resume();
-    btn.textContent = 'Stop Audio Engine';
-    btn.style.background = '#ff445522';
-    btn.style.borderColor = '#ff4455';
-    btn.style.color = '#ff4455';
-    updateAudioBuffer(); // start playback immediately
-  } else {
-    audioCtx.suspend();
-    btn.textContent = 'Start Audio Engine';
-    btn.style.background = '#4488ff22';
-    btn.style.borderColor = '#4488ffaa';
-    btn.style.color = '#c8d4f0';
-    if (activeSource) { activeSource.stop(); activeSource = null; }
-  }
-}
-
-function updateAudioBuffer() {
-  if (!isAudioEnabled || !audioCtx || !chartData.sig) return;
-  
-  const mode = document.getElementById('audio-mode').value;
-  const freq = chartData.freq;
-  const sampRate = chartData.sampRate;
-  const bits = chartData.bits;
-  const osr = chartData.osr;
-  const fs_hz = freq * sampRate;
-  const type = document.getElementById('sig-type').value;
-  const amp = parseFloat(document.getElementById('sig-amp').value)/10;
-  
-  const sampleRate = audioCtx.sampleRate;
-  const duration = 1.0; 
-  const length = sampleRate * duration;
-  const buffer = audioCtx.createBuffer(1, length, sampleRate);
-  const data = buffer.getChannelData(0);
-
-  // Generate math representation 
-  for (let i = 0; i < length; i++) {
-    const t = i / sampleRate;
-    let v = 0;
-    
-    // Base frequency representation (can alias!)
-    let render_f = freq;
-    let is_aliasing = false;
-    
-    if (mode === 'aliased' && fs_hz < 2*freq) {
-        render_f = DSP.aliasFreq(freq, fs_hz);
-        is_aliasing = true;
-    }
-
-    if (type === 'sine')   v = Math.sin(2*Math.PI*render_f*t);
-    else if (type === 'square') v = Math.sign(Math.sin(2*Math.PI*render_f*t));
-    else if (type === 'chirp')  v = Math.sin(2*Math.PI*(render_f+render_f*2*t)*t);
-    else if (type === 'multi')  v = Math.sin(2*Math.PI*render_f*t)*.6 + Math.sin(2*Math.PI*render_f*3.1*t)*.4;
-    
-    v *= amp;
-
-    if (mode === 'quantized') {
-       const levels = Math.pow(2, bits);
-       const lsb = (2 * amp) / levels;
-       v = Math.round(v / lsb) * lsb;
-    }
-    
-    if (mode === 'oversampled') {
-       const levels = Math.pow(2, bits);
-       const lsb = (2 * amp) / levels;
-       // Add high freq noise mimicking dither then quantizing, then LPF (simulating OSR)
-       const noise = (Math.random() - 0.5) * lsb;
-       let q_val = Math.round((v + noise) / lsb) * lsb;
-       // We fade OSR error by sqrt(OSR), simulating filter averaging
-       const err = v - q_val;
-       v = v - err / Math.sqrt(osr); 
-    }
-    
-    data[i] = v * 0.5; // Scale volume down slightly
-  }
-
-  if (activeSource) {
-    activeSource.stop();
-  }
-
-  activeSource = audioCtx.createBufferSource();
-  activeSource.buffer = buffer;
-  activeSource.loop = true;
-  activeSource.connect(audioCtx.destination);
-  activeSource.start(0);
-}
-
-const orig_render = _renderFromData;
-_renderFromData = function() {
-    orig_render.apply(this, arguments);
-    updateAudioBuffer();
-};
-
-const orig_updateAllJS = updateAllJS;
-updateAllJS = function() {
-    orig_updateAllJS.apply(this, arguments);
-    updateAudioBuffer();
-};
-
-
-</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="js/dsp.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/stages.js"></script>
+<script src="js/app.js"></script>
+<script src="js/integrations.js"></script>
 </body>
 </html>

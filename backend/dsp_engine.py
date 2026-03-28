@@ -49,7 +49,10 @@ class DSPEngine:
         elif signal_type == "square":
             s = np.sign(np.sin(2 * np.pi * frequency * t))
         elif signal_type == "chirp":
-            s = np.sin(2 * np.pi * (frequency + frequency * 2 * t) * t)
+            f0 = frequency
+            f1 = frequency * 3.0
+            k = (f1 - f0)
+            s = np.sin(2 * np.pi * (f0 * t + 0.5 * k * t ** 2))
         elif signal_type == "multi":
             s = np.sin(2 * np.pi * frequency * t) * 0.6 + np.sin(2 * np.pi * frequency * 3.1 * t) * 0.4
         else:
@@ -65,19 +68,25 @@ class DSPEngine:
     def sample_signal(
         self,
         signal: SignalResult,
-        sampling_rate_ratio: float
+        sampling_rate_ratio: float,
+        signal_frequency: float,
+        signal_type: str = "sine"
     ) -> SamplingResult:
         step = max(1, round(self.N_SAMPLES / (sampling_rate_ratio * 10)))
         indices = list(range(0, self.N_SAMPLES, step))
         vals = [signal.s[i] for i in indices]
         
-        # approximate true frequency
-        base_freq = (sampling_rate_ratio * 10) / 2 # dummy for ratio back to freq
-        fs_effective = base_freq * sampling_rate_ratio
-        
-        is_aliased = sampling_rate_ratio < 2.0
+        fs_effective = signal_frequency * sampling_rate_ratio
         nyq = fs_effective / 2
-        alias_freq = abs(base_freq - round(base_freq / fs_effective) * fs_effective) if fs_effective > 0 else 0
+        
+        max_freq = signal_frequency
+        if signal_type == "multi":
+            max_freq = signal_frequency * 3.1
+        elif signal_type == "chirp":
+            max_freq = signal_frequency * 3.0
+            
+        is_aliased = max_freq > nyq
+        alias_freq = abs(max_freq - round(max_freq / fs_effective) * fs_effective) if fs_effective > 0 else 0
 
         return SamplingResult(
             sample_indices=indices,
@@ -120,8 +129,22 @@ class DSPEngine:
         osr: int
     ) -> OversamplingResult:
         quant = self.quantize(signal, bits)
-        gain = 10 * np.log10(osr) if osr > 0 else 0
-        eff_snr = quant.snr_simulated + gain
+        q_arr = np.array(quant.quantized)
+        
+        if osr > 1:
+            cutoff = 1.0 / osr
+            b, a = scipy_signal.butter(4, cutoff, btype='low')
+            filtered = scipy_signal.filtfilt(b, a, q_arr)
+        else:
+            filtered = q_arr
+            
+        s_arr = np.array(signal.s)
+        noise = s_arr - filtered
+        signal_power = float(np.mean(s_arr ** 2))
+        noise_power = float(np.mean(noise ** 2))
+        eff_snr = 999.0 if noise_power < 1e-12 else 10 * np.log10(signal_power / noise_power)
+        
+        gain = 10 * np.log10(osr) if osr > 1 else 0.0
         enob = (eff_snr - 1.76) / 6.02
 
         return OversamplingResult(
@@ -136,7 +159,7 @@ class DSPEngine:
         signal: SignalResult,
         window: bool = True
     ) -> dict:
-        N = 128
+        N = len(signal.s)
         s = np.array(signal.s[:N])
         if window:
             win = np.hanning(N)
